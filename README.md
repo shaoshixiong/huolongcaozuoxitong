@@ -6,6 +6,6 @@
 	可以随意修改，分发，在此基础上进行修改发布商用，但必须注明“基于火龙操作系统”的说明，未经作者许可禁止将代码申请专利。
 	测试SVN
 
-https://gitee.com/ssxos/huolongcaozuoxitong/blob/master/QQ%E6%88%AA%E5%9B%BE20190905152747.bmp
+<img width="1024" height="768" src="https://gitee.com/ssxos/huolongcaozuoxitong/blob/master/QQ%E6%88%AA%E5%9B%BE20190905152747.bmp" />
 
-https://gitee.com/ssxos/huolongcaozuoxitong/blob/master/QQ%E6%88%AA%E5%9B%BE20190909145551.bmp
+<img src="https://gitee.com/ssxos/huolongcaozuoxitong/blob/master/QQ%E6%88%AA%E5%9B%BE20190909145551.bmp" />
