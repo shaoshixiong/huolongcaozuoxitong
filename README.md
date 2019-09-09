@@ -1,9 +1,17 @@
 <h2>介绍</h2>
 1.对火龙操作系统代码贡献要求，代码必须以中文编写，无论是注释还是变量名。
 <br/>
-2.本操作系统已完成的功能，内存管理，多任务管理，中文显示，图片显示，文本阅读，图形化管理。
+2.本操作系统已完成的功能，内存管理，多任务管理，，图形化管理。
 <br/>
-3.版权声明 可以随意修改，分发，在此基础上进行修改发布商用，但必须注明“基于火龙操作系统”的说明，未经作者许可禁止将代码申请专利。 
+<h2>功能</h2>
+1.中文显示。<br/>
+2.图片显示。<br/>
+3.文本阅读。<br/>
+4.支持32位真色彩，1920*1080分辨率。<br/>
+<h2>运行</h2>
+1.下载img (软盘镜像) 文件。
+<br/>
+2.下载VM虚拟机，安装之后新建虚拟机添加软盘把路径选择 下载好的img软盘镜像文件，然后启动就可以了。
 <h2>截图</h2>
 <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMD
 AwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/
@@ -5024,3 +5032,6 @@ d+Bf/BDa/wDxuj/hmD4af9E78C/+CG1/+N0UUfU6H8i+5B9arfzv72H/AAzB
 v72H/DMHw0/6J34F/wDBDa//ABuj/hmD4af9E78C/wDghtf/AI3RRR9TofyL
 7kH1qt/O/vYf8MwfDT/onfgX/wAENr/8brW8H/Bvwh8PNTkvfD/hXw3od5LE
 YHn0/TIbWV4yQxQsiglSVU46ZUelFFOOFoxfNGCT9EKWIqtWcnb1Z//Z">
+<h2>版权</h2>
+1.允许随意修改，分发，在此基础上进行修改发布商用，但必须注明“基于火龙操作系统”的说明。<br/>
+2.未经作者许可禁止将代码申请专利。
