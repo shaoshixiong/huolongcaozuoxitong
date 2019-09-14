@@ -1,0 +1,1 @@
+copy debug\*.img ¾µÏñ\SSXOS.img
