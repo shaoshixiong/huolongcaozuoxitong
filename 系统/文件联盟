@@ -1,0 +1,114 @@
+OBJS_BOOTPACK = 主程序.目标 甲语言函数.目标 mhbm.目标 图形化管理.目标 描述表.目标 \
+ 中断.目标 先进先出.目标 键盘.目标 鼠标.目标 内存管理.目标 图层管理.目标 \
+ 文件管理.目标 窗体.目标 定时器.目标 多任务.目标 压缩算法.目标 控制台.目标 \
+ 图标解码.目标 联像组解码.目标 绘画.目标 应用程序接口.目标 实时时钟.目标 位图解码.目标 mnbzk.目标
+TOOLPATH = ../z_tools/
+inCPATH	 = ../z_tools/inc/
+
+MAKE     = $(TOOLPATH)make.exe -r
+NASK	 = $(TOOLPATH)nask.exe
+CC1		 = $(TOOLPATH)cc1.exe -I$(inCPATH) -Os -Wall -quiet
+GAS2NASK = $(TOOLPATH)gas2nask.exe -a
+OBJ2BIM  = $(TOOLPATH)obj2bim.exe
+MAKEFONT = $(TOOLPATH)makefont.exe
+MAKEFNT6 = ../z_tools/font/makefnt6.exe
+Bin2OBJ	 = $(TOOLPATH)bin2obj.exe
+BIM2SSX	 = $(TOOLPATH)bim2ssx.exe
+RULEFILE = $(TOOLPATH)inc/ssx.rul
+EDIMG	 = $(TOOLPATH)edimg.exe
+IMGTOL	 = $(TOOLPATH)imgtol.com
+COPY     = copy
+DEL	 	 = del
+
+default:
+	$(MAKE) img
+
+
+启动程序10.bin : 启动程序10.甲 Makefile
+	$(NASK) 启动程序10.甲 启动程序10.bin 启动程序10.lst
+
+甲语言头.bin : 甲语言头.甲 Makefile
+	$(NASK) 甲语言头.甲 甲语言头.bin	甲语言头.lst
+
+甲语言函数.目标 : 甲语言函数.甲 Makefile
+	$(NASK) 甲语言函数.甲 甲语言函数.目标 甲语言函数.lst
+	
+mhbm.bin  : mhbm.文本 Makefile	
+	$(MAKEFONT) mhbm.文本 mhbm.bin
+	
+mhbm.目标	 : mhbm.bin Makefile
+	$(Bin2OBJ) mhbm.bin mhbm.目标 _mhbm
+
+mnbzk.bin : mnbzk.文本 Makefile
+	$(MAKEFNT6) mnbzk.文本 mnbzk.bin
+
+mnbzk.目标 : mnbzk.bin Makefile
+	$(Bin2OBJ) mnbzk.bin mnbzk.目标 _mnbzk
+
+位图解码.目标 : 位图解码.bak Makefile
+	$(COPY) 位图解码.bak 位图解码.目标
+	
+主程序.bim : $(OBJS_BOOTPACK) Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:主程序.bim stack:3136k map:主程序.map \
+	$(OBJS_BOOTPACK)
+# 3MB+64KB=3136KB
+
+主程序.ssx : 主程序.bim Makefile
+	$(BIM2SSX) 主程序.bim 主程序.ssx 0
+
+
+
+ssxos.sys : 甲语言头.bin 主程序.ssx Makefile
+	copy /B 甲语言头.bin+主程序.ssx ssxos.sys 
+
+ssxos.img : 启动程序10.bin ssxos.sys Makefile
+	$(EDIMG)   imgin:$(TOOLPATH)fdimg0at.tek \
+		wbinimg src:启动程序10.bin len:512 from:0 to:0 \
+		copy from:ssxos.sys to:@: \
+		copy from:chinese.fnt to:@: \
+		copy from:启动程序10.lst to:@: \
+		copy from:color.epm to:@: \
+		copy from:tview.epm to:@: \
+		copy from:txt1.txt to:@: \
+		copy from:invader.epm to:@: \
+		copy from:fujisan1.jpg to:@: \
+		copy from:city.jpg to:@: \
+		copy from:nyanpo.ico to:@: \
+		copy from:dn.jpg to:@: \
+	   imgout:ssxos.img
+	   
+%.gas : %.乙 Makefile
+		$(CC1) -o $*.gas $*.乙
+		
+%.甲 : %.gas Makefile
+		$(GAS2NASK) $*.gas $*.甲
+		
+%.目标 : %.甲 Makefile
+		$(NASK) $*.甲 $*.目标 $*.lst		
+
+img :
+	$(MAKE) ssxos.img
+	
+run :
+	$(MAKE) img
+	$(COPY) ssxos.img ..\z_tools\qemu\fdimage0.bin
+	$(MAKE) -C $(TOOLPATH)qemu
+
+install:
+	$(MAKE) img
+	$(IMGTOL) w a:ssxos.img
+
+clean :
+	-$(DEL)  *.bin
+	-$(DEL)  *.lst
+	-$(DEL)	 *.gas
+	-$(DEL)	 *.目标
+	-$(DEL) 主程序.甲
+	-$(DEL) 主程序.map
+	-$(DEL) 主程序.bim
+	-$(DEL) 主程序.ssx
+	-$(DEL) ssxos.sys
+
+src_only:
+	$(MAKE) clean
+	-$(DEL)	ssxos.img

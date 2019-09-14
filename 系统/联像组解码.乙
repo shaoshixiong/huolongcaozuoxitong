@@ -1,0 +1,802 @@
+/* 作者 : 邵世雄 */
+/*
+ * 联像组 decoding engine 循环 DCT-baseline
+ *
+ *      copy右s 2019 by nikq | nikq::club.
+ *
+ * history::
+ * 2019/04/28 | 添加ed OSASK-GUI ( by H.Kawai )
+ * 2019/05/12 | optimized DCT ( 20-bits fixed point, etc...) -> line 407-464 ( by I.Tak. )
+ * 2019/09/27 |改造为鹅卵石0.B输入（DLL）（由Kum输入提供）
+ * 2019/09/28 |  各种错误修复和一些优化（由H.Kawai提供）
+ *
+ */
+
+
+定类型 无符号 字符 无符字符;
+
+结构 DLL_STRPICENV { 整型 work[16384]; };
+
+定类型 结构
+{
+    整型 elem; //元素数量
+    无符号 短整型 code[256];
+    无符号 字符  大小[256];
+    无符号 字符  value[256];
+}HUFF;
+
+定类型 结构
+{
+    // SOF
+    整型 宽;
+    整型 高度;
+    // MCU
+    整型 mcu_宽;
+    整型 mcu_高度;
+
+    整型 max_h,max_v;
+    整型 compo_计数;
+    整型 compo_id[3];
+    整型 compo_sample[3];
+    整型 compo_h[3];
+    整型 compo_v[3];
+    整型 compo_qt[3];
+
+    // SOS
+    整型 scan_计数;
+    整型 scan_id[3];
+    整型 scan_ac[3];
+    整型 scan_dc[3];
+    整型 scan_h[3];  // 采样元素数量
+    整型 scan_v[3];  // 采样元素数量
+    整型 scan_qt[3]; // 量化表索引
+    
+    // DRI
+    整型 interval;
+
+    整型 mcu_buf[32*32*4]; //buf
+    整型 *mcu_yuv[4];
+    整型 mcu_preDC[3];
+    
+    // DQT
+    整型 dqt[3][64];
+    整型 n_dqt;
+    
+    // DHT
+    HUFF huff[2][3];
+    
+    
+    // FILE i/o
+	无符号 字符 *fp, *fp1;
+    无符号 长整型 bit_buff;
+    整型 bit_remain;
+    整型 宽_buf;
+
+	整型 base_img[64][64]; // 基本图像（[水平频率uπ] [垂直频率vπ] [水平相位（M / 8）] [垂直相位（N / 8）]
+
+    /* 循环 dll 
+    
+    联像组 *jpeg = (联像组 *)m分配(占字数(联像组) + 256);
+    */
+    整型 dummy[64];
+    
+}联像组;
+
+/* 循环 16bit */
+#ifndef 像素16
+#定义 像素16(r, g, b)	((r) << 11 | (g) << 5 | (b))
+	/* 0 <= r <= 31, 0 <= g <= 63, 0 <= b <= 31 */
+#endif
+
+整型 信息_联像组(结构 DLL_STRPICENV *env, 整型 *信息, 整型 大小, 无符字符 *fp);
+整型 解码0_联像组(结构 DLL_STRPICENV *env, 整型 大小, 无符字符 *fp, 整型 b_类型, 无符字符 *buf, 整型 跳过);
+
+空 jpeg_idct_初始化(整型 base_img[64][64]);
+整型 jpeg_初始化(联像组 *jpeg);
+// 整型 jpeg_头部(联像组 *jpge);
+空 jpeg_解码(联像组 *jpeg, 无符号 字符 *红绿蓝,整型 b_类型);
+
+/* ----------------- 开始 main section ----------------- */
+
+整型 信息_联像组(结构 DLL_STRPICENV *env,整型 *信息, 整型 大小, 无符字符 *fp0)
+{
+	联像组 *jpeg = (联像组 *) (((整型 *) env) + 128);
+	jpeg->fp = fp0;
+	jpeg->fp1 = fp0 + 大小;
+
+//	若 (512 + 占字数 (联像组) > 64 * 1024)
+//		返回 0;
+
+	若 (jpeg_初始化(jpeg))
+		返回 0;
+//	jpeg_头部(jpeg);
+
+	若 (jpeg->宽 == 0)
+		返回 0;
+	
+	信息[0] = 0x0002;
+	信息[1] = 0x0000;
+	信息[2] = jpeg->宽;
+	信息[3] = jpeg->高度;
+
+	/* OK */
+	返回 1;
+}
+
+整型 解码0_联像组(结构 DLL_STRPICENV *env,整型 大小, 无符字符 *fp0, 整型 b_类型, 无符字符 *buf, 整型 跳过)
+{
+	联像组 *jpeg = (联像组 *) (((整型 *) env) + 128);
+	jpeg->fp = fp0;
+	jpeg->fp1 = fp0 + 大小;
+
+	jpeg_idct_初始化(jpeg->base_img);
+	jpeg_初始化(jpeg);
+//	jpeg_头部(jpeg);
+
+//	若 (jpeg->宽 == 0)
+//		返回 8;
+	/* 这不会被调用，因为它在解码0中解密后被调用 */
+
+	jpeg->宽_buf = 跳过 / (b_类型 & 0x7f) + jpeg->宽;
+    jpeg_解码(jpeg, buf, b_类型);
+
+	/* OK */
+	返回 0;
+}
+
+// -------------------------- I/O ----------------------------
+
+无符号 短整型 获取_bits(联像组 *jpeg, 整型 bit)
+{
+	无符号 字符  c;
+	无符号 短整型 ret;
+	无符号 长整型  buff;
+	整型 remain;
+
+	buff   = jpeg->bit_buff;
+	remain = jpeg->bit_remain;
+
+	当 (remain <= 16) 
+	{
+		若 (jpeg->fp >= jpeg->fp1) 
+		{
+			ret = 0;
+			转到 fin;
+		}
+		c = *jpeg->fp++;
+		若 (c == 0xff) 
+		{ /* 这不会被调用，因为它在解码0中解密后被调用 */
+			若 (jpeg->fp >= jpeg->fp1) 
+			{
+				ret = 0;
+				转到 fin;
+			}
+			jpeg->fp++;  /* 跳过00 */
+		}
+		buff = (buff << 8) | c;
+		remain += 8;
+	}
+	ret = (buff >> (remain - bit)) & ((1 << bit) - 1);
+	remain -= bit;
+
+	jpeg->bit_remain = remain;
+	jpeg->bit_buff   = buff;
+fin:
+	返回 ret;
+}
+
+// ------------------------ 联像组段实现 -----------------
+
+// 开始 of frame
+整型 jpeg_sof(联像组 *jpeg)
+{
+	无符号 字符 c;
+	整型 i, h, v, n;
+
+	若 (jpeg->fp + 8 > jpeg->fp1)
+		转到 错;
+	/* fp [2]是bpp */
+	jpeg->高度 = jpeg->fp[3] << 8 | jpeg->fp[4];
+	jpeg->宽  = jpeg->fp[5] << 8 | jpeg->fp[6];
+	n = jpeg->compo_计数 = jpeg->fp[7]; // Num of compo, nf
+	jpeg->fp += 8;
+	若 (jpeg->fp + n * 3 > jpeg->fp1)
+		转到 错;
+
+	循环 (i = 0; i < n; i++) 
+	{
+		jpeg->compo_id[i] = jpeg->fp[0];
+
+		jpeg->compo_sample[i] = c = jpeg->fp[1];
+		h = jpeg->compo_h[i] = (c >> 4) & 0x0f;
+		v = jpeg->compo_v[i] = c & 0x0f;
+
+		若 (jpeg->max_h < h)
+			jpeg->max_h = h;
+		若 (jpeg->max_v < v)
+			jpeg->max_v = v;
+
+        jpeg->compo_qt[i] = jpeg->fp[2];
+		jpeg->fp += 3;
+    }
+    返回 0;
+错:
+	jpeg->fp = jpeg->fp1;
+	返回 1;
+}
+
+// 定义 quantize 表
+整型 jpeg_dqt(联像组 *jpeg)
+{
+	无符号 字符 c;
+	整型 i, j, 大小;
+
+	若 (jpeg->fp + 2 > jpeg->fp1)
+		转到 错;
+	大小 = (jpeg->fp[0] << 8 | jpeg->fp[1]) - 2;
+	jpeg->fp += 2;
+	若 (jpeg->fp + 大小 > jpeg->fp1)
+		转到 错;
+
+	当 (大小 > 0) 
+	{
+		c = *jpeg->fp++;
+		大小--;
+		j = c & 7;
+		若 (j > jpeg->n_dqt)
+			jpeg->n_dqt = j;
+
+ 		若 (c & 0xf8) 
+		{
+			// 16 bit DQT
+			循环 (i = 0; i < 64; i++) 
+			{
+				jpeg->dqt[j][i] = jpeg->fp[0]; /* 下部被丢弃 */
+				jpeg->fp += 2;
+			}
+			大小 += -64 * 2;
+		} 
+		则 
+		{
+			//  8 bit DQT
+			循环 (i = 0; i < 64; i++)
+				jpeg->dqt[j][i] = *jpeg->fp++;
+			大小 -= 64;
+		}
+	}
+	返回 0;
+错:
+	jpeg->fp = jpeg->fp1;
+	返回 1;
+}
+
+// 定义 huff内管 表
+整型 jpeg_dht(联像组 *jpeg)
+{
+	无符号 tc, th;
+	无符号 code = 0;
+	整型 i, j, k, num, Li[17];
+	整型 长, val;
+	HUFF *表;
+
+	若 (jpeg->fp + 2 > jpeg->fp1)
+		转到 错;
+	长 = (jpeg->fp[0] << 8 | jpeg->fp[1]) - 2;
+	jpeg->fp += 2;
+
+	当 (长 > 0) 
+	{
+		若 (jpeg->fp + 17 > jpeg->fp1)
+			转到 错;
+		val = jpeg->fp[0];
+
+		tc = (val >> 4) & 0x0f; // 表类（DC / AC组件选择器）
+		th =  val       & 0x0f; // 表头（多少架）
+		表 = &(jpeg->huff[tc][th]);
+
+		num = 0;
+		k = 0;
+		循环 (i = 1; i <= 16; i++) 
+		{
+			Li[i] = jpeg->fp[i];
+			num += Li[i];
+            循环 (j = 0; j < Li[i]; j++)
+                表->大小[k++] = i;
+		}
+		表->elem = num;
+		jpeg->fp += 17;
+
+		k=0;
+		code=0;
+		i = 表->大小[0];
+		当 (k < num) 
+		{
+			当 (表->大小[k] == i)
+				表->code[k++] = code++;
+			若 (k >= num)
+				终止;
+			做 {
+				code <<= 1;
+				i++;
+			} 当 (表->大小[k] != i);
+		}
+
+		若 (jpeg->fp + num > jpeg->fp1)
+			转到 错;
+		循环 (k = 0; k < num; k++)
+			表->value[k] = jpeg->fp[k];
+		jpeg->fp += num;
+
+        长 -= 18 + num;
+    }
+    返回 0;
+错:
+	jpeg->fp = jpeg->fp1;
+	返回 1;
+}
+
+整型 jpeg_初始化(联像组 *jpeg)
+{
+	无符号 字符 c;
+	整型 r = 0, i;
+	jpeg->宽 = 0;
+	jpeg->mcu_preDC[0] = 0;
+	jpeg->mcu_preDC[1] = 0;
+	jpeg->mcu_preDC[2] = 0;
+	jpeg->n_dqt = 0;
+	jpeg->max_h = 0;
+	jpeg->max_v = 0;
+	jpeg->bit_remain = 0;
+	jpeg->bit_buff   = 0;
+	// 没有DRI重置
+	jpeg->interval = 0;
+//	返回;
+//}
+//
+//整型 jpeg_头部(联像组 *jpeg)
+//{
+//	无符号 字符 c;
+//	整型 r = 0, i;
+
+	循环 (;;) {
+		若 (jpeg->fp + 2 > jpeg->fp1)
+			转到 错;
+		若 (jpeg->fp[0] != 0xff)
+            转到 err0;
+		c = jpeg->fp[1];
+		jpeg->fp += 2;
+		若 (c == 0xd8)
+			继续; /* SOI */
+		若 (c == 0xd9)
+			转到 错; /* EOI */
+
+		若 (c == 0xc0)
+            jpeg_sof(jpeg);
+		则 若 (c == 0xc4)
+            jpeg_dht(jpeg);
+		则 若 (c == 0xdb)
+            jpeg_dqt(jpeg);
+		则 若 (c == 0xdd) 
+		{
+			若 (jpeg->fp + 4 > jpeg->fp1)
+				转到 错;
+			jpeg->interval = jpeg->fp[2] << 8 | jpeg->fp[3];
+			jpeg->fp += 4;
+		} 
+		则 若 (c == 0xda) 
+		{
+			若 (jpeg->fp + 3 > jpeg->fp1)
+				转到 错;
+			jpeg->scan_计数 = jpeg->fp[2];
+			jpeg->fp += 3;
+			若 (jpeg->fp + jpeg->scan_计数 * 2 > jpeg->fp1)
+				转到 错;
+			循环 (i = 0; i < jpeg->scan_计数; i++) 
+			{
+				jpeg->scan_id[i] = jpeg->fp[0];
+				jpeg->scan_dc[i] = jpeg->fp[1] >> 4;   // DC Huffman Table
+				jpeg->scan_ac[i] = jpeg->fp[1] & 0x0F; // AC Huffman Table
+				jpeg->fp += 2;
+			}
+			jpeg->fp += 3; /* 3bytes 跳过 */
+            转到 fin;
+		} 
+		则 
+		{
+			/* 不支持 */
+			若 (jpeg->fp + 2 > jpeg->fp1)
+				转到 错;
+			jpeg->fp += jpeg->fp[0] << 8 | jpeg->fp[1];
+		}
+    }
+错:
+	jpeg->fp = jpeg->fp1;
+err0:
+	r++;
+fin:
+	返回 r;
+}
+
+// MCU 解码
+
+// 解码
+空 jpeg_解码_初始化(联像组 *jpeg)
+{
+	整型 i, j;
+
+	循环 (i = 0; i < jpeg->scan_计数; i++) 
+	{
+		// i:scan
+		循环 (j = 0; j < jpeg->compo_计数; j++) 
+		{
+			// j:frame
+			若 (jpeg->scan_id[i] == jpeg->compo_id[j]) 
+			{
+				jpeg->scan_h[i]  = jpeg->compo_h[j];
+				jpeg->scan_v[i]  = jpeg->compo_v[j];
+				jpeg->scan_qt[i] = jpeg->compo_qt[j];
+                终止;
+			}
+		}
+	//	若 (j >= jpeg->compo_计数)
+	//		返回 1;
+	}
+	jpeg->mcu_宽  = jpeg->max_h * 8;
+	jpeg->mcu_高度 = jpeg->max_v * 8;
+    
+	循环 (i = 0; i < 32 * 32 * 4; i++)
+		jpeg->mcu_buf[i] = 0x80;
+
+	循环 (i = 0; i < jpeg->scan_计数; i++)
+		jpeg->mcu_yuv[i] = jpeg->mcu_buf + (i << 10);
+	返回;
+}
+
+// 霍夫曼1符号解码
+整型 jpeg_huff_解码(联像组 *jpeg,整型 tc,整型 th)
+{
+    HUFF *h = &(jpeg->huff[tc][th]);
+    整型 code,大小,k,v;
+    code = 0;
+    大小 = 0;
+    k = 0;
+    当( 大小 < 16 )
+	{
+        大小++;
+        v = 获取_bits(jpeg,1);
+        若(v < 0)
+		{
+            返回 v;
+        }
+        code = (code << 1) | v;
+
+        当(h->大小[k] == 大小)
+		{
+            若(h->code[k] == code)
+			{
+                返回 h->value[k];
+            }
+            k++;
+        }
+    }
+
+    返回 -1;
+}
+
+空 jpeg_idct_初始化(整型 base_img[64][64])
+{
+    整型 u, v, m, n;
+    整型 tmpm[8], tmpn[8];
+	整型 cost[32];
+	cost[ 0] =  32768; cost[ 1] =  32138; cost[ 2] =  30274; cost[ 3] =  27246; cost[ 4] =  23170; cost[ 5] =  18205; cost[ 6] =  12540; cost[ 7] =   6393;
+	cost[ 8] =      0; cost[ 9] =  -6393; cost[10] = -12540; cost[11] = -18205; cost[12] = -23170; cost[13] = -27246; cost[14] = -30274; cost[15] = -32138;
+	循环 (u = 0; u < 16; u++)
+		cost[u + 16] = - cost[u];
+
+    循环 (u = 0; u < 8; u++) 
+	{
+        {
+            整型 i=u, d=u*2;
+            若 (d == 0)
+                i = 4;
+            循环 (m = 0; m < 8; m++)
+			{
+                tmpm[m] = cost[i]; // 水平Cos波形
+                i=(i+d)&31;
+            }
+        }
+        循环 (v = 0; v < 8; v++) 
+		{
+            {
+                整型 i=v,d=v*2;
+                若 (d == 0)
+                    i=4;
+                循环 (n = 0; n < 8; n++)
+				{
+                    tmpn[n] = cost[i]; // 垂直Cos波形
+                    i=(i+d)&31;
+                }
+            }
+           // 乘以基础图像
+            循环 (m = 0; m < 8; m++) 
+			{
+                循环 (n = 0; n < 8; n++) 
+				{
+                    base_img[u * 8 + v][m * 8 + n] = (tmpm[m] * tmpn[n])>>15;
+                }
+            }
+        }
+    }
+    返回;
+}
+
+空 jpeg_idct(整型 *方块, 整型 *dest, 整型 base_img[64][64])
+{
+    整型 i, j ,k;
+
+    循环 (i = 0; i < 64; i++)
+        dest[i] = 0;
+
+    循环 (i = 0; i < 64; i++) 
+	{
+        k = 方块[i];
+        若(k) 
+		{ //0系数是
+            循环 (j = 0; j < 64; j++) 
+			{
+                dest[j] += k * base_img[i][j];
+            }
+        }
+    }
+     // 撤消固定点+除以4
+    循环 (i = 0; i < 64; i++)
+        dest[i] >>= 17;
+    返回;
+}
+
+//恢复编码后的数字
+整型 jpeg_获取_value(联像组 *jpeg,整型 大小)
+{
+	整型 val = 0;
+    若 (大小) 
+	{
+		val = 获取_bits(jpeg,大小);
+		若 (val < 0)
+			val = 0x10000 | (0 - val);
+		则 若 (!(val & (1<<(大小-1))))
+			val -= (1 << 大小) - 1;
+	}
+    返回 val;
+}
+
+// ---- 块解码 ---
+// 霍夫曼解码+逆量化+逆锯齿形
+整型 jpeg_解码_huff(联像组 *jpeg,整型 scan,整型 *方块, 无符字符 *zigzag_表)
+{
+    整型 大小, val, 运行, index;
+    整型 *pQt = (整型 *)(jpeg->dqt[jpeg->scan_qt[scan]]);
+
+    // DC
+    大小 = jpeg_huff_解码(jpeg,0,jpeg->scan_dc[scan]);
+    若(大小 < 0)
+        返回 0;
+    val = jpeg_获取_value(jpeg,大小);
+    jpeg->mcu_preDC[scan] += val;
+    方块[0] = jpeg->mcu_preDC[scan] * pQt[0];
+
+   //交流解码
+    index = 1;
+    当(index<64)
+    {
+        大小 = jpeg_huff_解码(jpeg,1,jpeg->scan_ac[scan]);
+        若(大小 < 0)
+            终止;
+        // EOB
+        若(大小 == 0)
+            终止;
+        
+        // RLE
+        运行  = (大小>>4)&0xF;
+        大小 = 大小 & 0x0F;
+        
+        val = jpeg_获取_value(jpeg,大小);
+        若(val>=0x10000) 
+		{
+           //标记发现
+            返回 val;
+        }
+
+        // ZRL
+        当 (运行-- > 0)
+            方块[ zigzag_表[index++] ] = 0;
+        
+        方块[ zigzag_表[index] ] = val * pQt[index];
+        index++;
+    }
+    当(index<64)
+        方块[zigzag_表[index++]]=0;
+    返回 0;
+}
+
+// 块（此处用于插值）
+// 重采样
+空 jpeg_mcu_bitblt(整型 *src, 整型 *dest, 整型 宽,
+                     整型 x0, 整型 y0, 整型 x1, 整型 y1)
+{
+	整型 w, h;
+	整型 x, y, y2;
+	w = x1 - x0;
+	h = y1 - y0;
+	dest += y0 * 宽 + x0;
+	宽 -= w;
+
+	循环 (y = 0; y < h; y++) 
+	{
+		y2 = (y * 8 / h) * 8;
+		循环 (x = 0; x < w; x++)
+			*dest++ = src[y2 + (x * 8 / w)];
+		dest += 宽;
+	}
+}
+
+// 单MCU转换
+空 jpeg_解码_mcu(联像组 *jpeg, 无符字符 *zigzag_表)
+{
+	整型 scan, val;
+	整型 h, v;
+	整型 *p, hh, vv;
+	整型 方块[64], dest[64];
+
+	// 展开mcu_宽 x mcu_高大小的块
+	循环 (scan = 0; scan < jpeg->scan_计数; scan++) 
+	{
+		hh = jpeg->scan_h[scan];
+		vv = jpeg->scan_v[scan];
+		循环 (v = 0; v < vv; v++) 
+		{
+            循环 (h = 0; h < hh; h++) 
+			{
+				// 块（8x8）解码
+				val = jpeg_解码_huff(jpeg, scan, 方块, zigzag_表);
+			//	若(val>=0x10000){
+			//		printf("marker found:%02x\n",val);
+			//	}
+
+				// 逆DCT
+				jpeg_idct(方块, dest, jpeg->base_img);
+				// 重采样
+
+				// 写buf
+				p = jpeg->mcu_buf + (scan << 10);
+
+                // 扩大转移
+				jpeg_mcu_bitblt(dest, p, jpeg->mcu_宽,
+					jpeg->mcu_宽 * h / hh, jpeg->mcu_高度 * v / vv,
+					jpeg->mcu_宽 * (h + 1) / hh, jpeg->mcu_高度 * (v + 1) / vv);
+			}
+		}
+	}
+	返回;
+}
+
+// YCrCb=>红绿蓝
+
+空 jpeg_解码_yuv(联像组 *jpeg, 整型 h, 整型 v, 无符号 字符 *红绿蓝, 整型 b_类型)
+{
+	整型 x0, y0, x, y, x1, y1;
+	整型 *py;
+	整型 Y12, V;
+	整型 mw, mh, w;
+
+	mw = jpeg->mcu_宽;
+	mh = jpeg->mcu_高度;
+
+	x0 = h * jpeg->max_h * 8;
+	y0 = v * jpeg->max_v * 8;
+
+	x1 = jpeg->宽 - x0;
+	若 (x1 > mw)
+		x1 = mw;
+	y1 = jpeg->高度 - y0;
+	若 (y1 > mh)
+		y1 = mh;
+    
+	py = jpeg->mcu_buf;
+	红绿蓝 += (y0 * jpeg->宽_buf + x0) * (b_类型 & 0x7f);
+	w = (jpeg->宽_buf - x1) * (b_类型 & 0x7f);
+
+	循环 (y = 0; y < y1; y++) 
+	{
+		循环 (x = 0; x < x1; x++) 
+		{
+			整型 b, g, r;
+			Y12 = py[0] << 12;
+		//	U = py[1024]; /* pu */
+			V = py[2048]; /* pv */
+
+			/* blue */
+			b = 128 + ((Y12 - V * 4 + py[1024] /* pu */ * 0x1C59) >> 12);
+			若 (b & 0xffffff00)
+				b = (~b) >> 24;
+
+			/* green */
+			g = 128 + ((Y12 - V * 0x0B6C) >> 12);
+			若 (g & 0xffffff00)
+				g = (~g) >> 24;
+
+			/* red */
+			r = 128 + ((Y12 + V * 0x166E) >> 12);
+			若 (r & 0xffffff00)
+				r = (~r) >> 24;
+			若 (b_类型 == 0x0004) 
+			{
+				红绿蓝[0] = b;
+				红绿蓝[1] = g;
+				红绿蓝[2] = r;
+				py++;
+				红绿蓝 += 4;
+			} 
+			则 若 (b_类型 == 0x0002) 
+			{
+				r &= 0xff;
+				g &= 0xff;
+				b &= 0xff;
+				*(短整型 *) 红绿蓝 = 像素16(r >> 3, g >> 2, b >> 3);
+				红绿蓝 += 2;
+			}
+		}
+		py += mw - x1;
+		红绿蓝 += w;
+	}
+	返回;
+}
+
+#定义 INIT_ZTABLE(i, b0, b1, b2, b3)	*(整型 *) &zigzag_表[i] = b0 | b1 << 8 | b2 << 16 | b3 << 24
+
+空 jpeg_解码(联像组 *jpeg, 无符字符 *红绿蓝, 整型 b_类型)
+{
+	整型 h_unit, v_unit;
+	整型 mcu_计数, h, v;
+
+    无符字符 zigzag_表[64];
+
+	INIT_ZTABLE( 0,  0,  1,  8, 16); INIT_ZTABLE( 4,  9,  2,  3, 10);
+	INIT_ZTABLE( 8, 17, 24, 32, 25); INIT_ZTABLE(12, 18, 11,  4,  5);
+	INIT_ZTABLE(16, 12, 19, 26, 33); INIT_ZTABLE(20, 40, 48, 41, 34);
+	INIT_ZTABLE(24, 27, 20, 13,  6); INIT_ZTABLE(28,  7, 14, 21, 28);
+	INIT_ZTABLE(32, 35, 42, 49, 56); INIT_ZTABLE(36, 57, 50, 43, 36);
+	INIT_ZTABLE(40, 29, 22, 15, 23); INIT_ZTABLE(44, 30, 37, 44, 51);
+	INIT_ZTABLE(48, 58, 59, 52, 45); INIT_ZTABLE(52, 38, 31, 39, 46);
+	INIT_ZTABLE(56, 53, 60, 61, 54); INIT_ZTABLE(60, 47, 55, 62, 63);
+
+	// MCU大小计算
+	jpeg_解码_初始化(jpeg);
+
+	h_unit = (jpeg->宽 + jpeg->mcu_宽 - 1) / jpeg->mcu_宽;
+	v_unit = (jpeg->高度 + jpeg->mcu_高度 - 1) / jpeg->mcu_高度;
+
+	// 可以扩大一个街区
+	mcu_计数 = 0;
+	循环 (v = 0; v < v_unit; v++) 
+	{
+		循环 (h = 0; h < h_unit; h++) 
+		{
+			mcu_计数++;
+			jpeg_解码_mcu(jpeg, zigzag_表);
+			jpeg_解码_yuv(jpeg, h, v, 红绿蓝, b_类型 & 0x7fff);
+			若 (jpeg->interval > 0 && mcu_计数 >= jpeg->interval) 
+			{
+				// RSTmマーカをすっ飛ばす(FF hoge)
+				// hogeは読み飛ばしてるので、FFも飛ばす
+				jpeg->bit_remain -= (jpeg->bit_remain & 7);
+				jpeg->bit_remain -= 8;
+				jpeg->mcu_preDC[0] = 0;
+				jpeg->mcu_preDC[1] = 0;
+				jpeg->mcu_preDC[2] = 0;
+				mcu_计数 = 0;
+			}
+		}
+	}
+    返回;
+}
+

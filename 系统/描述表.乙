@@ -1,0 +1,63 @@
+/* 描述表如GDT和IDT */
+/* 作者 : 邵世雄 */
+#引入 "主程序.头"
+
+空 初始化_gdtidt(空)
+{
+	结构 SEGMENT_DESCRIPTOR *gdt = (结构 SEGMENT_DESCRIPTOR *) 地址_GDT;
+	结构 GATE_DESCRIPTOR    *idt = (结构 GATE_DESCRIPTOR    *) 地址_IDT;
+	整型 i;
+
+	/*  GDT的初始化 */
+	循环 (i = 0; i <= 限制_GDT / 8; i++) 
+	{
+		设置_segmdesc(gdt + i, 0, 0, 0);
+	}
+	设置_segmdesc(gdt + 1, 0xffffffff,   0x00000000, AR_DATA32_RW);
+	设置_segmdesc(gdt + 2, 限制_BOTPAK, 地址_BOTPAK, AR_CODE32_ER);
+	加载_gdtr(限制_GDT, 地址_GDT);
+
+	/* IDT的初始化 */
+	循环 (i = 0; i <= 限制_IDT / 8; i++) 
+	{
+		设置_gatedesc(idt + i, 0, 0, 0);
+	}
+	加载_idtr(限制_IDT, 地址_IDT);
+
+	/*  IDT的设定 */
+	设置_gatedesc(idt + 0x0c, (整型) asm_inthandler0c, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x0d, (整型) asm_inthandler0d, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x20, (整型) asm_inthandler20, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x21, (整型) asm_inthandler21, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x27, (整型) asm_inthandler27, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x2c, (整型) asm_inthandler2c, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x40, (整型) asm_火龙_api,      2 * 8, AR_INTGATE32 + 0x60);
+
+	返回;
+}
+
+空 设置_segmdesc(结构 SEGMENT_DESCRIPTOR *sd, 无符号 整型 limit, 整型 base, 整型 ar)
+{
+	若 (limit > 0xfffff) 
+	{
+		ar |= 0x8000; /* G_bit = 1 */
+		limit /= 0x1000;
+	}
+	sd->limit_低    = limit & 0xffff;
+	sd->base_低     = base & 0xffff;
+	sd->base_中     = (base >> 16) & 0xff;
+	sd->access_右 = ar & 0xff;
+	sd->limit_高   = ((limit >> 16) & 0x0f) | ((ar >> 8) & 0xf0);
+	sd->base_高    = (base >> 24) & 0xff;
+	返回;
+}
+
+空 设置_gatedesc(结构 GATE_DESCRIPTOR *gd, 整型 offset, 整型 selector, 整型 ar)
+{
+	gd->off设置_低   = offset & 0xffff;
+	gd->selector     = selector;
+	gd->dw_计数     = (ar >> 8) & 0xff;
+	gd->access_右 = ar & 0xff;
+	gd->off设置_高  = (offset >> 16) & 0xffff;
+	返回;
+}

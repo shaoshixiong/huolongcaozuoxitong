@@ -1,0 +1,71 @@
+/* 鼠标相关的 */
+/* 作者 : 邵世雄 */
+#引入 "主程序.头"
+
+结构 先进先出32 *鼠标进出;
+整型 鼠标数据0;
+
+空 inthandler2c(整型 *esp)
+/* 来自PS/2鼠标的中断 */
+{
+	整型 数据;
+	io_out8(PIC1_OCW2, 0x64);	/* 通知PIC1 IRQ-12的受理已经完成 */
+	io_out8(PIC0_OCW2, 0x62);	/* 通知PIC0 IRQ-02的受理已经完成 */
+	数据 = io_in8(PORT_KEYDAT);
+	进出32_放入(鼠标进出, 数据 + 鼠标数据0);
+	返回;
+}
+
+#定义 KEYCMD_SENDTO_鼠标		0xd4
+#定义 鼠标CMD_ENABLE			0xf4
+
+空 启用_鼠标(结构 先进先出32 *进出, 整型 数据0, 结构 鼠标_DEC *mdec)
+{
+	/* 记住目的地FifObuf*/
+	鼠标进出 = 进出;
+	鼠标数据0 = 数据0;
+	/* 激活鼠标 */
+	wait_KBC_sendready();
+	io_out8(PORT_KEYCMD, KEYCMD_SENDTO_鼠标);
+	wait_KBC_sendready();
+	io_out8(PORT_KEYDAT, 鼠标CMD_ENABLE);
+	mdec->phase = 0; /*等待0xfa的阶段*/
+	返回;  /* 顺利的话，键盘控制其返回ACK(0xfa) */
+}
+
+整型 鼠标_解码(结构 鼠标_DEC *mdec, 无符号 字符 dat)
+{
+	若 (mdec->phase == 0) 
+	{
+		/* 等待鼠标的0xfa的阶段 */
+		若 (dat == 0xfa)
+			mdec->phase++;
+	} 
+	则 
+	{
+		/* 按顺序等待标记的第1个，第2个和第3个字节 */
+		mdec->buf[mdec->phase - 1] = dat;
+		若 (mdec->phase == 1) 
+		{
+			/* 仅在标记的第一个字节处 */
+			若 ((mdec->buf[0] & 0xc8) != 0x08)
+				mdec->phase--;	// ssxos05b（上一个）取消版本
+		}
+		若 (mdec->phase == 3) 
+		{
+			/* 等待鼠标第三个字节的阶段 */
+			mdec->phase = 1;
+			mdec->btn   = mdec->buf[0] & 0x07;
+			mdec->x     = mdec->buf[1];
+			mdec->y     = mdec->buf[2];
+			若 ((mdec->buf[0] & 0x10) != 0)
+				mdec->x |= 0xffffff00;
+			若 ((mdec->buf[0] & 0x20) != 0)
+				mdec->y |= 0xffffff00;
+			mdec->y = - mdec->y; /* 鼠标的y方向与画面符号相反 */
+			返回 1;/* 应该不可能到这里来 */
+		}
+		mdec->phase++;
+	}
+	返回 0;
+}

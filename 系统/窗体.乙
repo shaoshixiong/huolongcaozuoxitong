@@ -1,0 +1,303 @@
+/*  窗体相关的 */
+/* 作者 : 邵世雄 */
+#引入 "主程序.头"
+
+空 制作_窗体(无符号 整型 *buf, 整型 x大小, 整型 y大小, 字符 *标题, 整型 icon, 字符 act)
+{
+	实体盒(buf, x大小, 0xc6c6c6, 0      , 0      , x大小-2, 0      );	// 浅灰色
+	实体盒(buf, x大小, 0xc6c6c6, 0      , 0      , 0,       y大小-2);	// 浅灰色
+	实体盒(buf, x大小, 0xFFFFFF, 1      , 1      , x大小-2, 1      );	// 上白色
+	实体盒(buf, x大小, 0xFFFFFF, 1      , 1      , 1,       y大小-2);	// 左白色
+	实体盒(buf, x大小, 0xc6c6c6, 2      , 2      , x大小-3, y大小-3);	// 浅灰色（窗体）
+	实体盒(buf, x大小, 0x848484, x大小-2, 1      , x大小-2, y大小-2);	// 深灰色
+	实体盒(buf, x大小, 0x848484, 1      , y大小-2, x大小-2, y大小-2);	// 底部深灰色
+	实体盒(buf, x大小, 0x000000, x大小-1, 0      , x大小-1, y大小-1);	// 右黑色
+	实体盒(buf, x大小, 0x000000, 0      , y大小-1, x大小-1, y大小-1);	// 下黑色
+	制作_窗口标题(buf, x大小, 标题, icon, act);
+	返回;
+}
+
+空 制作_窗口标题(无符号 整型 *buf, 整型 x大小, 字符 *标题, 整型 icon, 字符 act)
+{
+	静态 无符号 字符 btn[14][31] = {
+		"hhhhhhhhhhhhhhh hhhhhhhhhhhhhhh",
+		"h             h h             h",
+		"h             h h             h",
+		"h             h h             h",
+		"h             h h   hh   hh   h",
+		"h             h h    hh hh    h",
+		"h             h h     hhh     h",
+		"h  hhhhhhhhh  h h     hhh     h",
+		"h             h h    hh hh    h",
+		"h             h h   hh   hh   h",
+		"h             h h             h",
+		"h             h h             h",
+		"h             h h             h",
+		"hhhhhhhhhhhhhhh hhhhhhhhhhhhhhh",
+	};
+	结构 任务 *任 = 任_当前();
+	整型 tc, tbc, 旧的语言;
+	无符号 字符 logo[3];
+
+	若 (act) 
+	{
+		tc  = 0xffffff;
+		tbc = 0x0080ff;
+	} 
+	则 
+	{
+		tc  = 0xc6c6c6;
+		tbc = 0x848484;
+	}
+	实体盒(buf, x大小, tbc, 3, 3, x大小-4, 20);	// 标题栏
+	logo[0] = 0x80 + icon * 2;
+	logo[1] = 0x81 + icon * 2;
+	logo[2] = 0;
+
+	/* 一旦单词模式设置为0，表情符号绘图 */
+	旧的语言 = 任->语言模式;
+	任->语言模式 = 0;
+	打印字体s(buf, x大小,  8, 4, tc, logo);
+	任->语言模式 = 旧的语言;
+	打印字体s(buf, x大小, 24, 4, tc, 标题);
+	
+	pic数据(buf, x大小, x大小 - 36, 5, &btn[0][0], 31, 14, -1);
+	返回;
+}
+
+空 制作_文本框(结构 图层 *层, 整型 x0, 整型 y0, 整型 sx, 整型 sy, 整型 c)
+{
+	整型 x1 = x0 + sx, y1 = y0 + sy;
+	整型 *p = (无符号 整型 *) (层->buf);
+	实体盒(p, 层->bx大小, 0x848484, x0 - 2, y0 - 3, x1 + 1, y0 - 3);
+	实体盒(p, 层->bx大小, 0x848484, x0 - 3, y0 - 3, x0 - 3, y1 + 1);
+	实体盒(p, 层->bx大小, 0xffffff, x0 - 3, y1 + 2, x1 + 1, y1 + 2);
+	实体盒(p, 层->bx大小, 0xffffff, x1 + 2, y0 - 3, x1 + 2, y1 + 2);
+	实体盒(p, 层->bx大小, 0x000000, x0 - 1, y0 - 2, x1 + 0, y0 - 2);
+	实体盒(p, 层->bx大小, 0x000000, x0 - 2, y0 - 2, x0 - 2, y1 + 0);
+	实体盒(p, 层->bx大小, 0xc6c6c6, x0 - 2, y1 + 1, x1 + 0, y1 + 1);
+	实体盒(p, 层->bx大小, 0xc6c6c6, x1 + 1, y0 - 2, x1 + 1, y1 + 1);
+	实体盒(p, 层->bx大小, c,        x0 - 1, y0 - 1, x1 + 0, y1 + 0);
+	返回;
+}
+
+空 打印字体s_asc_层(结构 图层 *层, 整型 x, 整型 y, 整型 c, 整型 b, 字符 *s, 整型 l)
+{
+	结构 任务 *任 = 任_当前();
+	整型 *p = (无符号 整型 *) (层->buf);
+	实体盒(p, 层->bx大小, b, x, y, x + l * 8 - 1, y + 15);
+	若 (任->语言模式 != 0 && 任->语言字节1 != 0) 
+	{
+		打印字体s(p, 层->bx大小, x, y, c, s);
+		图层_刷新(层, x - 8, y, x + l * 8, y + 16);
+	} 
+	则 
+	{
+		打印字体s(p, 层->bx大小, x, y, c, s);
+		图层_刷新(层, x, y, x + l * 8, y + 16);
+	}
+	返回;
+}
+
+空 改变_窗口标题(结构 图层 *层, 整型 act)
+{
+	整型 x, y, x大小 = 层->bx大小;
+	整型 c, tc[2], tbc[2];
+	整型 bpp = 获取_bpp();
+	无符号 短整型 *sbuf = (无符号 短整型 *) (层->buf);
+	无符号 整型   *ibuf = (无符号 整型   *) (层->buf);
+
+	tc[0]  = 获取_颜色(bpp, 0xc6c6c6);	// 待用
+	tbc[0] = 获取_颜色(bpp, 0x848484);
+	tc[1]  = 获取_颜色(bpp, 0xffffff);	// 活动
+	tbc[1] = 获取_颜色(bpp, 0x0080ff);
+
+	若 (bpp == 8) 
+	{
+		循环 (y = 3; y < 21; y++) 
+		{
+			循环 (x = 3; x < x大小 - 3; x++) 
+			{
+				c = 层->buf[y * x大小 + x];
+				若 (c == tc[1 - act]) {
+					c = tc[act];
+				} 
+				则 若 (c == tbc[1 - act]) 
+				{
+					c = tbc[act];
+				}
+				层->buf[y * x大小 + x] = c;
+			}
+		}
+	} 
+	则 若 (bpp == 16) 
+	{
+		循环 (y = 3; y < 21; y++) 
+		{
+			循环 (x = 3; x < x大小 - 3; x++) 
+			{
+				c = sbuf[y * x大小 + x];
+				若 (c == tc[1 - act]) 
+				{
+					c = tc[act];
+				} 
+				则 若 (c == tbc[1 - act]) 
+				{
+					c = tbc[act];
+				}
+				sbuf[y * x大小 + x] = c;
+			}
+		}
+	} 
+	则 若 (bpp == 24) 
+	{
+		循环 (y = 3; y < 21; y++) 
+		{
+			循环 (x = 3; x < x大小 - 3; x++) 
+			{
+				c = ibuf[y * x大小 + x];
+				若 (c == tc[1 - act]) 
+				{
+					c = tc[act];
+				} 
+				则 若 (c == tbc[1 - act]) 
+				{
+					c = tbc[act];
+				}
+				ibuf[y * x大小 + x] = c;
+			}
+		}
+	}
+	图层_刷新(层, 3, 3, x大小, 21);
+	返回;
+}
+
+结构 气泡 *制作_泡(结构 内存管理 *内管, 结构 图层 *层,
+								整型 px, 整型 py, 整型 s模式, 整型 sx, 整型 sy)
+{
+	静态 无符号 字符 网格[5][5];
+	静态 无符号 字符 角[5][5] = {
+		"...aa",
+		"..ahh",
+		".ahhh",
+		"ahhhh",
+		"ahhhh"
+	};
+	静态 无符号 字符 fukidashi[7][9] = {
+		"hhhhhaaaa",
+		"aahhha...",
+		"..ahhha..",
+		"...aaha..",
+		".....aha.",
+		"......aa.",
+		"........a",
+	};
+	结构 气泡 *泡 = (结构 气泡 *) 内管_分配_4k(内管, 占字数 (结构 气泡));
+	无符号 短整型 *sp = (无符号 短整型 *) (层->buf);
+	无符号 整型   *ip = (无符号 整型   *) (层->buf);
+	整型 bpp = 获取_bpp();
+	整型 i, x, y;
+	整型 psx = sx * s模式 + 10, psy = sy * s模式 + 10;
+	结构 POS {
+		整型 x, y;
+	} pos[4] = {
+		{px, py}, {px+psx-5, 0}, {px+psx-5, py+psy-4}, {0, py+psy-4}
+	};
+
+	泡->层   = 层;
+	泡->px    = px;
+	泡->py    = py;
+	泡->s模式 = s模式;
+	泡->sx    = sx;
+	泡->sy    = sy;
+
+	若 (bpp == 8) 
+	{
+		循环 (y = py; y < py+psy; y++) 
+		{
+			循环 (x = px; x < px+psx; x++) 
+			{
+				层->buf[(py+psy+y) * 层->bx大小 + x] = 层->col_inv;
+			}
+		}
+	} 
+	则 若 (bpp == 16) 
+	{
+		循环 (y = 0; y < 7; y++) 
+		{
+			循环 (x = 0; x < px+psx; x++) 
+			{
+				sp[(py+psy+y) * 层->bx大小 + x] = 层->col_inv;
+			}
+		}
+	} 
+	则 若 (bpp == 24) 
+	{
+		循环 (y = py; y < py+psy; y++) 
+		{
+			循环 (x = px; x < px+psx; x++) 
+			{
+				ip[(py+psy+y) * 层->bx大小 + x] = 层->col_inv;
+			}
+		}
+	}
+	实体盒(ip, 层->bx大小, 0x000000, px  , py,   px+psx-1, py+psy  );	// 全黑
+	实体盒(ip, 层->bx大小, 0xffffff, px+1, py+1, px+psx-2, py+psy-1);	// 白色里面
+	/* 角落绘图（四角） */
+	循环 (i = 0; i < 4; i++) 
+	{
+		pic数据(ip, 层->bx大小, pos[i].x, pos[i].y, &角[0][0], 5, 5, 层->col_inv);
+		循环 (y = 0; y <= 4 ; y++) 
+		{
+			循环 (x = 0; x <= 4; x++) 
+			{
+				网格[y][x] = 角[y][x];	/* 复制到地图 */
+			}
+		}
+		循环 (y = 0; y <= 4; y++) 
+		{
+			循环 (x = 0; x <= 4; x++) 
+			{
+				角[y][x] = 网格[4-x][y];	/*回转 */
+			}
+		}
+	}
+	/* 气球 */
+	pic数据(ip, 层->bx大小, 层->bx大小 - 40, psy, &fukidashi[0][0], 9, 7, 层->col_inv);
+	返回 泡;
+}
+
+空 打印迷你字体s_asc_层(结构 图层 *层, 整型 x, 整型 y, 整型 c, 整型 b, 字符 *s, 整型 l)
+{
+	无符号 整型 *p = (无符号 整型 *) (层->buf);
+	实体盒(p, 层->bx大小, b, x, y, x + l * 6 - 1, y + 11);
+	打印迷你字体s(p, 层->bx大小, x, y, c, s);
+	图层_刷新(层, x, y, x + l * 6, y + 12);
+	返回;
+}
+
+
+空 制作_omnaomi(结构 图层 *层, 整型 px, 整型 py)
+{
+	无符号 字符 omu[16][31] = {
+		"...............aaaaaaa.........",
+		".........aaaaa添加dddadaaaa.....",
+		"......aaa添加dddddddd添加ddaa....",
+		".....aa添加ddddddddddaaaaaaaa...",
+		"...a添加a添加ddddddddda添加dddaa..",
+		"..aaaaaa添加ddaaaa添加daaaaaada..",
+		".aa添加da添加daabbb添加ddddddddaa.",
+		".adaaaa添加ddabaaab添加dddddddda.",
+		"添加dddddddddaba.ab添加ddddd添加a.",
+		"添加dddddddddabaaab添加ddddddddda",
+		"ad添加dddddddaabbba添加ddddddddda",
+		"添加ddddddddddaaaaaaa添加ddddddda",
+		"添加ddddddddaaa......aa添加ddddda",
+		"添加ddddddaaa..........a添加ddda.",
+		".添加ddddaa.............aaaaaa..",
+		".aaaaaaaa......................",
+	};
+	无符号 整型 *p = (无符号 整型 *) (层->buf);
+	pic数据(p, 层->bx大小, px, py, &omu[0][0], 31, 16, 层->col_inv);
+	返回;
+}
