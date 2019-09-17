@@ -1,7 +1,7 @@
 /* ver指令(控制台.乙)  */
 /* 作者 : 邵世雄 */
 #定义 火龙_版本1	"ssxos Ver.0.1.05\n"
-#定义 火龙_版本2	"Copy右(C) 2006-2007 Akkiesoft.\n\n"
+#定义 火龙_版本2	"Copy右(C) 2006-2007 ssxossoft.\n\n"
 
 /* asm头.nas */
 结构 启动信息 { /* 0x0ff0-0x0fff */

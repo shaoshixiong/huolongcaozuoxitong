@@ -786,8 +786,8 @@ fin:
 			jpeg_解码_yuv(jpeg, h, v, 红绿蓝, b_类型 & 0x7fff);
 			若 (jpeg->interval > 0 && mcu_计数 >= jpeg->interval) 
 			{
-				// RSTmマーカをすっ飛ばす(FF hoge)
-				// hogeは読み飛ばしてるので、FFも飛ばす
+				// RSTm 
+				// hoge 
 				jpeg->bit_remain -= (jpeg->bit_remain & 7);
 				jpeg->bit_remain -= 8;
 				jpeg->mcu_preDC[0] = 0;
