@@ -11,13 +11,13 @@
 	无符号 整型 eflg, cr0, i;
 
 	/* 确认CPU是386还是486以上的 */
-	eflg = io_加载_e标记s() | E标识_AC_BIT;
-	io_store_e标记s(eflg);
-	eflg = io_加载_e标记s() & E标识_AC_BIT;
+	eflg = 出入流_加载_e标记s() | E标识_AC_BIT;
+	出入流_store_e标记s(eflg);
+	eflg = 出入流_加载_e标记s() & E标识_AC_BIT;
 	若 (eflg)/* 如果是386，即使设定AC=1,AC的值还会自动回到0 */
 		flg486 = 1;
 	eflg &= ~E标识_AC_BIT;		// 取消你做的
-	io_store_e标记s(eflg);
+	出入流_store_e标记s(eflg);
 
 	若 (flg486) 
 	{

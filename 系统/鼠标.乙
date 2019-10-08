@@ -9,9 +9,9 @@
 /* 来自PS/2鼠标的中断 */
 {
 	整型 数据;
-	io_out8(PIC1_OCW2, 0x64);	/* 通知PIC1 IRQ-12的受理已经完成 */
-	io_out8(PIC0_OCW2, 0x62);	/* 通知PIC0 IRQ-02的受理已经完成 */
-	数据 = io_in8(PORT_KEYDAT);
+	出入流_out8(PIC1_OCW2, 0x64);	/* 通知PIC1 IRQ-12的受理已经完成 */
+	出入流_out8(PIC0_OCW2, 0x62);	/* 通知PIC0 IRQ-02的受理已经完成 */
+	数据 = 出入流_in8(PORT_KEYDAT);
 	进出32_放入(鼠标进出, 数据 + 鼠标数据0);
 	返回;
 }
@@ -26,9 +26,9 @@
 	鼠标数据0 = 数据0;
 	/* 激活鼠标 */
 	wait_KBC_sendready();
-	io_out8(PORT_KEYCMD, KEYCMD_SENDTO_鼠标);
+	出入流_out8(PORT_KEYCMD, KEYCMD_SENDTO_鼠标);
 	wait_KBC_sendready();
-	io_out8(PORT_KEYDAT, 鼠标CMD_ENABLE);
+	出入流_out8(PORT_KEYDAT, 鼠标CMD_ENABLE);
 	mdec->phase = 0; /*等待0xfa的阶段*/
 	返回;  /* 顺利的话，键盘控制其返回ACK(0xfa) */
 }

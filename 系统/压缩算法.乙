@@ -485,13 +485,13 @@
 	返回 rev;
 }
 
-静态 整型 tek_获取len5(结构 tek_STR_RNGDEC *rd, 整型 m, 整型 s_pos, 整型 stk)
+静态 整型 tek_获取len5(结构 tek_STR_RNGDEC *rd, 整型 m, 整型 s_位置, 整型 stk)
 {
 	整型 i;
 	若 (tek_rd获取1(rd, &rd->probs.lensel[m][0], 0x71, 0, rd->ptbm[3]) ^ stk) /* 低 */
-		i = tek_rd获取1(rd, rd->probs.pb[s_pos].len低[m], 0x73, 1, rd->ptbm[4]) & 7;
+		i = tek_rd获取1(rd, rd->probs.pb[s_位置].len低[m], 0x73, 1, rd->ptbm[4]) & 7;
 	则 若 (tek_rd获取1(rd, &rd->probs.lensel[m][1], 0x71, 0, rd->ptbm[3]) ^ stk) /* 中 */
-		i = tek_rd获取1(rd, rd->probs.pb[s_pos].len中[m], 0x73, 1, rd->ptbm[5]);
+		i = tek_rd获取1(rd, rd->probs.pb[s_位置].len中[m], 0x73, 1, rd->ptbm[5]);
 	则 
 	{
 		/* 高 */
@@ -512,8 +512,8 @@
 静态 整型 tek_decmain5(整型 *work, 无符字符 *src, 整型 osiz, 无符字符 *q, 整型 lc, 整型 pb, 整型 lp, 整型 标记)
 {
 	静态 整型 state_表[] = { 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 4, 5 };
-	整型 i, j, k, pmch, rep[4], s, pos, m_pos = (1 << pb) - 1, m_lp = (1 << lp) - 1;
-	整型 stk = (标记 == -1), lcr = 8 - lc, s_pos, lit0cntmsk = 0x78;
+	整型 i, j, k, pmch, rep[4], s, 位置, m_位置 = (1 << pb) - 1, m_lp = (1 << lp) - 1;
+	整型 stk = (标记 == -1), lcr = 8 - lc, s_位置, lit0cntmsk = 0x78;
 	无符整型32 *lit1;
 	结构 tek_STR_RNGDEC *rd = (结构 tek_STR_RNGDEC *) work;
 	结构 tek_STR_PRB *prb = &rd->probs;
@@ -593,13 +593,13 @@
 	若 ((tek_rd获取1(rd, &prb->pb[0].st[0].mch, 0x71, 0, rd->ptbm[0]) ^ stk) == 0)
 		转到 错;
 	*q++ = tek_rd获取1(rd, prb->lit, lit0cntmsk, 1, &rd->bm[24]) & 0xff;
-	pmch &= 0; s &= 0; pos = 1;
-	当 (pos < osiz) 
+	pmch &= 0; s &= 0; 位置 = 1;
+	当 (位置 < osiz) 
 	{
-		s_pos = pos & m_pos;
-		若 (tek_rd获取1(rd, &prb->pb[s_pos].st[s].mch, 0x71, 0, rd->ptbm[s > 0]) ^ stk) 
+		s_位置 = 位置 & m_位置;
+		若 (tek_rd获取1(rd, &prb->pb[s_位置].st[s].mch, 0x71, 0, rd->ptbm[s > 0]) ^ stk) 
 		{ /* 非lz */
-			i = (q[-1] >> lcr | (pos & m_lp) << lc) << 8;
+			i = (q[-1] >> lcr | (位置 & m_lp) << lc) << 8;
 			s = state_表[s];
 			若 (pmch == 0)
 				*q = tek_rd获取1(rd, &prb->lit[i], lit0cntmsk, 1, &rd->bm[24]) & 0xff;
@@ -626,7 +626,7 @@
 				*q = j & 0xff;
 				pmch &= 0;
 			}
-			pos++;
+			位置++;
 			q++;
 		} 
 		则 
@@ -637,7 +637,7 @@
 				rep[3] = rep[2];
 				rep[2] = rep[1];
 				rep[1] = rep[0];
-				j = i = tek_获取len5(rd, 0, s_pos, stk);
+				j = i = tek_获取len5(rd, 0, s_位置, stk);
 				s = s < 7 ? 7 : 10;
 				若 (j >= 4)
 					j = 3;
@@ -670,7 +670,7 @@
 				若 (tek_rd获取1(rd, &prb->st[s].repg0, 0x71, 0, rd->ptbm[13]) ^ stk) 
 				{ /* rep0 */
 					i |= -1;
-					若 (tek_rd获取1(rd, &prb->pb[s_pos].st[s].rep0l1, 0x71, 0, rd->ptbm[13]) == 0) 
+					若 (tek_rd获取1(rd, &prb->pb[s_位置].st[s].rep0l1, 0x71, 0, rd->ptbm[13]) == 0) 
 					{
 						s = s < 7 ? 9 : 11;
 						转到 跳过;
@@ -699,16 +699,16 @@
 					rep[1] = rep[0];
 					rep[0] = i;
 				}
-				i = tek_获取len5(rd, 1, s_pos, stk);
+				i = tek_获取len5(rd, 1, s_位置, stk);
 				s = s < 7 ? 8 : 11;
 			}
 跳过:
 			i += 2;
-			若 (pos + rep[0] < 0)
+			若 (位置 + rep[0] < 0)
 				转到 错;
-			若 (pos + i > osiz)
-				i = osiz - pos;
-			pos += i;
+			若 (位置 + i > osiz)
+				i = osiz - 位置;
+			位置 += i;
 			做 
 			{
 				*q = q[rep[0]];

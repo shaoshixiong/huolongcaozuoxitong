@@ -195,7 +195,7 @@ fin:
 
 	若 (jpeg->fp + 8 > jpeg->fp1)
 		转到 错;
-	/* fp [2]是bpp */
+	/* fp [2]是像素深度 */
 	jpeg->高度 = jpeg->fp[3] << 8 | jpeg->fp[4];
 	jpeg->宽  = jpeg->fp[5] << 8 | jpeg->fp[6];
 	n = jpeg->compo_计数 = jpeg->fp[7]; // Num of compo, nf

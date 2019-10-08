@@ -8,8 +8,8 @@
 空 inthandler21(整型 *esp)
 {/* 来自PS/2键盘的中断 */
 	整型 数据;
-	io_out8(PIC0_OCW2, 0x61);	/* 通知PIC IRQ-01已经受理完毕 */
-	数据 = io_in8(PORT_KEYDAT);
+	出入流_out8(PIC0_OCW2, 0x61);	/* 通知PIC IRQ-01已经受理完毕 */
+	数据 = 出入流_in8(PORT_KEYDAT);
 	进出32_放入(键进出, 数据 + 键数据0);
 	返回;
 }
@@ -24,7 +24,7 @@
 	/* 等待键盘控制器发送数据 */
 	循环 (;;) 
 	{
-		若 ((io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0)
+		若 ((出入流_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0)
 			终止;
 	}
 	返回;
@@ -38,8 +38,8 @@
 
 	/* 初始化键盘控制电路 */
 	wait_KBC_sendready();
-	io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
+	出入流_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();
-	io_out8(PORT_KEYDAT, KBC_MODE);
+	出入流_out8(PORT_KEYDAT, KBC_MODE);
 	返回;
 }

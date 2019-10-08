@@ -109,6 +109,6 @@ clean :
 	-$(DEL) 主程序.ssx
 	-$(DEL) ssxos.sys
 
-src_only:
+src_打开ly:
 	$(MAKE) clean
 	-$(DEL)	ssxos.img

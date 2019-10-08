@@ -25,13 +25,13 @@
 	加载_idtr(限制_IDT, 地址_IDT);
 
 	/*  IDT的设定 */
-	设置_gatedesc(idt + 0x0c, (整型) asm_inthandler0c, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x0d, (整型) asm_inthandler0d, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x20, (整型) asm_inthandler20, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x21, (整型) asm_inthandler21, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x27, (整型) asm_inthandler27, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x2c, (整型) asm_inthandler2c, 2 * 8, AR_INTGATE32);
-	设置_gatedesc(idt + 0x40, (整型) asm_火龙_api,      2 * 8, AR_INTGATE32 + 0x60);
+	设置_gatedesc(idt + 0x0c, (整型) 甲语言_inthandler0c, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x0d, (整型) 甲语言_inthandler0d, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x20, (整型) 甲语言_inthandler20, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x21, (整型) 甲语言_inthandler21, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x27, (整型) 甲语言_inthandler27, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x2c, (整型) 甲语言_inthandler2c, 2 * 8, AR_INTGATE32);
+	设置_gatedesc(idt + 0x40, (整型) 甲语言_火龙_api,      2 * 8, AR_INTGATE32 + 0x60);
 
 	返回;
 }
