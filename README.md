@@ -13,7 +13,7 @@
 1.下载img (软盘镜像) 文件。
 <br/>
 2.下载VM虚拟机，安装之后新建虚拟机添加软盘把路径选择 下载好的img软盘镜像文件，然后启动就可以了。
-<h2>截图</h2><input type="text" />
+<h2>截图</h2><br/><input type="text" width="300" height="30" />
 <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMD
 AwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/
 2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM
